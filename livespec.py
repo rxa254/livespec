@@ -20,8 +20,8 @@ from PyQt5 import QtCore, QtGui
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-FS = 44100 #Hz
-CHUNKSZ = 1024 #samples
+FS = 22050 #Hz
+CHUNKSZ = 512 #samples
 
 class MicrophoneRecorder():
     def __init__(self, signal):
@@ -77,6 +77,7 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img.scale((1./FS)*CHUNKSZ, yscale)
 
         self.setLabel('left', 'Frequency', units='Hz')
+        self.setLabel('bottom', 'Time', units='s')
 
         # prepare window for later use
         self.win = np.hanning(CHUNKSZ)
