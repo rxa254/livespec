@@ -17,6 +17,8 @@ import numpy as np
 import pyqtgraph as pg
 import pyaudio
 from PyQt5 import QtCore, QtGui
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 FS = 44100 #Hz
 CHUNKSZ = 1024 #samples
@@ -33,7 +35,7 @@ class MicrophoneRecorder():
 
     def read(self):
         data = self.stream.read(CHUNKSZ, exception_on_overflow=False)
-        y = np.fromstring(data, 'int16')
+        y = np.frombuffer(data, 'int16')
         self.signal.emit(y)
 
     def close(self):
@@ -56,10 +58,18 @@ class SpectrogramWidget(pg.PlotWidget):
         color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
         cmap = pg.ColorMap(pos, color)
         lut = cmap.getLookupTable(0.0, 1.0, 256)
+        # colormap
+        colormap = mpl.colormaps['inferno']
+        colormap._init()
+        lut = (colormap._lut * 255).view(np.ndarray)
 
         # set colormap
         self.img.setLookupTable(lut)
         self.img.setLevels([-50,40])
+
+        # set colormap
+        self.img.setLookupTable(lut)
+        self.img.setLevels([-40, 40])
 
         # setup the correct scaling for y-axis
         freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
@@ -77,14 +87,15 @@ class SpectrogramWidget(pg.PlotWidget):
         spec = np.fft.rfft(chunk*self.win) / CHUNKSZ
         # get magnitude
         psd = abs(spec)
+        asd = np.sqrt(psd)
         # convert to dB scale
-        psd = 20 * np.log10(psd)
+        z = 20 * np.log10(asd)
 
         # roll down one and replace leading edge with new data
         self.img_array = np.roll(self.img_array, -1, 0)
-        self.img_array[-1:] = psd
+        self.img_array[-1:] = z
 
-        self.img.setImage(self.img_array, autoLevels=False)
+        self.img.setImage(self.img_array, autoLevels=True)
 
 if __name__ == '__main__':
     app = QtGui.QApplication([])
