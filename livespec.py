@@ -90,7 +90,7 @@ class SpectrogramWidget(pg.PlotWidget):
         psd = abs(spec)
         asd = np.sqrt(psd)
         # convert to dB scale
-        z = 20 * np.log10(asd)
+        z = 20 * np.log10(psd)
 
         # roll down one and replace leading edge with new data
         self.img_array = np.roll(self.img_array, -1, 0)
