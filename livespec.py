@@ -75,7 +75,7 @@ class SpectrogramWidget(pg.PlotWidget):
     def update(self, chunk):
         # normalized, windowed frequencies in data chunk
         spec = np.fft.rfft(chunk*self.win) / CHUNKSZ
-        # get magnitude 
+        # get magnitude
         psd = abs(spec)
         # convert to dB scale
         psd = 20 * np.log10(psd)
@@ -94,10 +94,10 @@ if __name__ == '__main__':
     mic = MicrophoneRecorder(w.read_collected)
 
     # time (seconds) between reads
-    interval = FS/CHUNKSZ
+    interval = CHUNKSZ/FS
     t = QtCore.QTimer()
     t.timeout.connect(mic.read)
-    t.start(1000/interval) #QTimer takes ms
+    t.start(int(1000 * interval)) #QTimer takes ms
 
     app.exec_()
     mic.close()
