@@ -1,0 +1,14 @@
+name: jukebox
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
+  - gwoptics
+dependencies:
+  - jupyterlab
+  - matplotlib
+  - scipy
+  - numpy
+  - pyqt
+  - pyqtgraph
+prefix: /Users/rana/miniforge3/envs/jukebox
