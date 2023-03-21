@@ -20,7 +20,7 @@ from PyQt5 import QtCore, QtGui
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-FS = 22050 #Hz
+FS = 16384 #Hz
 CHUNKSZ = 512 #samples
 
 class MicrophoneRecorder():
@@ -51,7 +51,8 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img = pg.ImageItem()
         self.addItem(self.img)
 
-        self.img_array = np.zeros((1000, int(CHUNKSZ/2+1)))
+        self.img_array  = np.zeros((1024, int(CHUNKSZ/2+1)))
+        self.data_array = np.zeros( (1024, int(CHUNKSZ/2+1)))
 
         # bipolar colormap
         pos = np.array([0., 1., 0.5, 0.25, 0.75])
@@ -59,17 +60,14 @@ class SpectrogramWidget(pg.PlotWidget):
         cmap = pg.ColorMap(pos, color)
         lut = cmap.getLookupTable(0.0, 1.0, 256)
         # colormap
-        colormap = mpl.colormaps['inferno']
+        colormap = mpl.colormaps['gist_rainbow']
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
 
         # set colormap
         self.img.setLookupTable(lut)
-        self.img.setLevels([-50,40])
+        self.img.setLevels([-20,20])
 
-        # set colormap
-        self.img.setLookupTable(lut)
-        self.img.setLevels([-40, 40])
 
         # setup the correct scaling for y-axis
         freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
@@ -92,11 +90,26 @@ class SpectrogramWidget(pg.PlotWidget):
         # convert to dB scale
         z = 20 * np.log10(psd)
 
-        # roll down one and replace leading edge with new data
-        self.img_array = np.roll(self.img_array, -1, 0)
-        self.img_array[-1:] = z
+        #smoo_const = 0.5
+        #z_ema = self.img_array[-1:]
+        #z_ema = (z - z_ema)*smoo_const + z_ema
 
-        self.img.setImage(self.img_array, autoLevels=True)
+        # roll down one and replace leading edge with new data
+
+        # data array for calculating the moving average
+        whiten = True
+        self.data_array = np.roll(self.data_array, -1, 0)
+        self.data_array[-1:] = psd
+        psd_ave = np.mean(self.data_array, axis=0)
+        if whiten:
+            z_ave = 20*np.log10(psd_ave)
+        else:
+            z_ave = 0
+
+        self.img_array = np.roll(self.img_array, -1, 0)
+        self.img_array[-1:] = z - z_ave
+
+        self.img.setImage(self.img_array, autoLevels=False)
 
 if __name__ == '__main__':
     app = QtGui.QApplication([])
