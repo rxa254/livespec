@@ -60,7 +60,7 @@ class SpectrogramWidget(pg.PlotWidget):
         cmap = pg.ColorMap(pos, color)
         lut = cmap.getLookupTable(0.0, 1.0, 256)
         # colormap
-        colormap = mpl.colormaps['gist_rainbow']
+        colormap = mpl.colormaps['inferno']
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
 
