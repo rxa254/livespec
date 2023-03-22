@@ -13,15 +13,37 @@ modified by rxa254 3/2023
 * conda install pyqt
 
 """
+
+
 import numpy as np
 import pyqtgraph as pg
 import pyaudio
 from PyQt5 import QtCore, QtGui
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import argparse
 
-FS = 16384 #Hz
-CHUNKSZ = 2**10 #samples
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-fs', '--sample_freq', type=int,
+                    help='Desired audio sampling frequency',
+                    default=44100)
+parser.add_argument('-nfft', '--fft_length', type=int,
+                    help='FFT length in # of samples. Default = 1024',
+                    default=1024)
+parser.add_argument('-cmax',
+                    help="max z in dB",
+                    default=20)
+parser.add_argument('-cmin',
+                    help="min z in dB",
+                    default=-20)
+args = parser.parse_args()
+
+
+
+FS = args.sample_freq #Hz
+CHUNKSZ = args.fft_length #samples
 
 class MicrophoneRecorder():
     def __init__(self, signal):
@@ -55,10 +77,10 @@ class SpectrogramWidget(pg.PlotWidget):
         self.data_array = np.zeros( (1024, int(CHUNKSZ/2+1)))
 
         # bipolar colormap
-        pos = np.array([0., 1., 0.5, 0.25, 0.75])
-        color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
-        cmap = pg.ColorMap(pos, color)
-        lut = cmap.getLookupTable(0.0, 1.0, 256)
+        #pos = np.array([0., 1., 0.5, 0.25, 0.75])
+        #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
+        #cmap = pg.ColorMap(pos, color)
+        #lut = cmap.getLookupTable(0.0, 1.0, 256)
         # colormap
         colormap = mpl.colormaps['rainbow']
         colormap._init()
@@ -109,7 +131,7 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img_array = np.roll(self.img_array, -1, 0)
         self.img_array[-1:] = z - z_ave
 
-        self.img.setImage(self.img_array, autoLevels=True)
+        self.img.setImage(self.img_array, autoLevels=False)
 
 if __name__ == '__main__':
     app = QtGui.QApplication([])
