@@ -21,7 +21,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 FS = 16384 #Hz
-CHUNKSZ = 512 #samples
+CHUNKSZ = 2**10 #samples
 
 class MicrophoneRecorder():
     def __init__(self, signal):
@@ -60,7 +60,7 @@ class SpectrogramWidget(pg.PlotWidget):
         cmap = pg.ColorMap(pos, color)
         lut = cmap.getLookupTable(0.0, 1.0, 256)
         # colormap
-        colormap = mpl.colormaps['inferno']
+        colormap = mpl.colormaps['rainbow']
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
 
@@ -109,7 +109,7 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img_array = np.roll(self.img_array, -1, 0)
         self.img_array[-1:] = z - z_ave
 
-        self.img.setImage(self.img_array, autoLevels=False)
+        self.img.setImage(self.img_array, autoLevels=True)
 
 if __name__ == '__main__':
     app = QtGui.QApplication([])
