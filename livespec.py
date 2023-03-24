@@ -43,13 +43,16 @@ parser.add_argument('-nfft', '--fft_length', type=int,
                     default=1024)
 parser.add_argument('-cmax',
                     help="max z in dB",
-                    default=20)
+                    default=50)
 parser.add_argument('-cmin',
                     help="min z in dB",
                     default=-20)
 parser.add_argument('-whiten',
                     help="True or False",
                     default=True)
+parser.add_argument('--colormap', type=str,
+                    help="matplotlib colormap name. default = rainbow",
+                    default='rainbow')
 args = parser.parse_args()
 
 
@@ -96,7 +99,7 @@ class SpectrogramWidget(pg.PlotWidget):
 
         # colormap
         colormap = mpl.colormaps['rainbow']
-        colormap = mpl.colormaps['gnuplot2']
+        colormap = mpl.colormaps[args.colormap]
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
 
