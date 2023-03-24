@@ -23,6 +23,15 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import argparse
 
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    print('\n')
+    print('SIGINT detected - shutting down gravefully...')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 
 parser = argparse.ArgumentParser()
