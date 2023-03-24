@@ -38,6 +38,9 @@ parser.add_argument('-cmax',
 parser.add_argument('-cmin',
                     help="min z in dB",
                     default=-20)
+parser.add_argument('-whiten',
+                    help="True or False",
+                    default=True)
 args = parser.parse_args()
 
 
@@ -81,14 +84,16 @@ class SpectrogramWidget(pg.PlotWidget):
         #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
         #cmap = pg.ColorMap(pos, color)
         #lut = cmap.getLookupTable(0.0, 1.0, 256)
+
         # colormap
         colormap = mpl.colormaps['rainbow']
+        colormap = mpl.colormaps['gnuplot2']
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
 
         # set colormap
         self.img.setLookupTable(lut)
-        self.img.setLevels([-20,20])
+        self.img.setLevels([args.cmin, args.cmax])
 
 
         # setup the correct scaling for y-axis
@@ -116,10 +121,8 @@ class SpectrogramWidget(pg.PlotWidget):
         #z_ema = self.img_array[-1:]
         #z_ema = (z - z_ema)*smoo_const + z_ema
 
-        # roll down one and replace leading edge with new data
-
         # data array for calculating the moving average
-        whiten = True
+        whiten = args.whiten
         self.data_array = np.roll(self.data_array, -1, 0)
         self.data_array[-1:] = psd
         psd_ave = np.mean(self.data_array, axis=0)
@@ -128,6 +131,7 @@ class SpectrogramWidget(pg.PlotWidget):
         else:
             z_ave = 0
 
+        # roll down one and replace leading edge with new data
         self.img_array = np.roll(self.img_array, -1, 0)
         self.img_array[-1:] = z - z_ave
 
