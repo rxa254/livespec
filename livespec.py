@@ -17,6 +17,7 @@ modified by rxa254 3/2023
 
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph import AxisItem
 import pyaudio
 from PyQt5 import QtCore, QtGui
 import matplotlib as mpl
@@ -47,12 +48,19 @@ parser.add_argument('-cmax',
 parser.add_argument('-cmin',
                     help="min z in dB",
                     default=-20)
-parser.add_argument('-whiten',
+parser.add_argument('--whiten',
                     help="True or False",
                     default=True)
 parser.add_argument('--colormap', type=str,
                     help="matplotlib colormap name. default = rainbow",
                     default='rainbow')
+parser.add_argument('--freq_scale', type=str,
+                    help="log or lin frequency scale. default = lin",
+                    default='lin')
+parser.add_argument('--specgram_weight', type=str,
+                    help="exponential or flat. Default = exponential",
+                    default='exponential')
+
 args = parser.parse_args()
 
 
@@ -80,6 +88,15 @@ class MicrophoneRecorder():
         self.stream.close()
         self.p.terminate()
 
+
+class LogAxisItem(AxisItem):
+    def __init__(self, *args, **kwargs):
+        AxisItem.__init__(self, *args, **kwargs)
+
+    def tickStrings(self, values, scale, spacing):
+        return [f"{10**value:.0f}" for value in values]
+
+
 class SpectrogramWidget(pg.PlotWidget):
     read_collected = QtCore.pyqtSignal(np.ndarray)
     def __init__(self):
@@ -88,17 +105,12 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img = pg.ImageItem()
         self.addItem(self.img)
 
-        self.img_array  = np.zeros((1024, int(CHUNKSZ/2+1)))
-        self.data_array = np.zeros( (1024, int(CHUNKSZ/2+1)))
-
-        # bipolar colormap
-        #pos = np.array([0., 1., 0.5, 0.25, 0.75])
-        #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
-        #cmap = pg.ColorMap(pos, color)
-        #lut = cmap.getLookupTable(0.0, 1.0, 256)
+        # how many FFTs to display
+        N_timeslices = 2**10
+        self.img_array  = np.zeros((N_timeslices, int(CHUNKSZ/2+1)))
+        self.data_array = np.zeros((N_timeslices, int(CHUNKSZ/2+1)))
 
         # colormap
-        colormap = mpl.colormaps['rainbow']
         colormap = mpl.colormaps[args.colormap]
         colormap._init()
         lut = (colormap._lut * 255).view(np.ndarray)
@@ -107,13 +119,24 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img.setLookupTable(lut)
         self.img.setLevels([args.cmin, args.cmax])
 
+        if args.freq_scale == 'lin':
+            # setup the scaling for linear freq y-axis
+            freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
+            # setup the scaling for log freq y-axis
+            freq = np.logspace(np.log10(20), np.log10(FS/2), int(CHUNKSZ/2)+1)
+            yscale = 1.0/(self.img_array.shape[1]/freq[-1])
+            self.img.scale((1./FS)*CHUNKSZ, yscale)
+            self.setLabel('left', 'Frequency', units='Hz')
 
-        # setup the correct scaling for y-axis
-        freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
-        yscale = 1.0/(self.img_array.shape[1]/freq[-1])
-        self.img.scale((1./FS)*CHUNKSZ, yscale)
+        elif args.freq_scale == 'log':
+            # setup the correct scaling for log y-axis
+            freq = np.logspace(np.log10(1), np.log10(FS/2), CHUNKSZ//2+1, base=10)
+            yscale = 1.0/(self.img_array.shape[1]/np.log10(freq[-1]/freq[0]))
+            self.img.scale((1./FS)*CHUNKSZ, yscale)
+            self.getAxis('left').setScale(LogAxisItem(orientation='left'))
+            self.getAxis('left').setLabel('Frequency', units='Hz')
 
-        self.setLabel('left', 'Frequency', units='Hz')
+
         self.setLabel('bottom', 'Time', units='s')
 
         # prepare window for later use
@@ -137,7 +160,21 @@ class SpectrogramWidget(pg.PlotWidget):
         whiten = args.whiten
         self.data_array = np.roll(self.data_array, -1, 0)
         self.data_array[-1:] = psd
-        psd_ave = np.mean(self.data_array, axis=0)
+
+        ### make an exponentially averaging window
+        nx, ny = np.shape(self.data_array)
+        wm = np.ones_like(self.data_array)
+        wx = np.flipud(np.arange(nx))
+        if args.specgram_weight == 'exponential':
+            wv = np.exp(-0.1*wx)
+        else:
+            wv = wx
+
+        # make an exponentially weighted matrix
+        wm = np.broadcast_to(wv,(ny, len(wv)))
+        weighted_data_array = wm.T * self.data_array
+        psd_ave = np.mean(weighted_data_array, axis=0)
+
         if whiten:
             z_ave = 20*np.log10(psd_ave)
         else:
