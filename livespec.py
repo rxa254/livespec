@@ -57,9 +57,12 @@ parser.add_argument('--colormap', type=str,
 parser.add_argument('--freq_scale', type=str,
                     help="log or lin frequency scale. default = lin",
                     default='lin')
-parser.add_argument('--specgram_weight', type=str,
-                    help="exponential or flat. Default = exponential",
-                    default='exponential')
+parser.add_argument('--specgram_weight', type=float,
+                    help="exponential or flat. Default = 0",
+                    default=0)
+parser.add_argument('--normalize', type=int,
+                    help="Gather PSD normalization data on N segments. Default = 0.",
+                    default=0)
 
 args = parser.parse_args()
 
@@ -109,6 +112,7 @@ class SpectrogramWidget(pg.PlotWidget):
         N_timeslices = 2**10
         self.img_array  = np.zeros((N_timeslices, int(CHUNKSZ/2+1)))
         self.data_array = np.zeros((N_timeslices, int(CHUNKSZ/2+1)))
+        self.iterator = 0
 
         # colormap
         colormap = mpl.colormaps[args.colormap]
@@ -165,10 +169,19 @@ class SpectrogramWidget(pg.PlotWidget):
         nx, ny = np.shape(self.data_array)
         wm = np.ones_like(self.data_array)
         wx = np.flipud(np.arange(nx))
-        if args.specgram_weight == 'exponential':
-            wv = np.exp(-0.1*wx)
-        else:
-            wv = wx
+
+        if args.normalize > 0:
+            while self.iterator < args.normalize:
+                self.iterator += 1
+
+            psd_ave = np.mean(self.data_array, axis=0)
+
+
+
+        # make the weighting matrix for the specgram
+        # 0 = no weighting
+        # > 0 means do some exponential averaging
+        wv = np.exp(-1 * args.specgram_weight * wx)
 
         # make an exponentially weighted matrix
         wm = np.broadcast_to(wv,(ny, len(wv)))
