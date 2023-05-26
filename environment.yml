@@ -3,12 +3,14 @@ channels:
   - anaconda
   - conda-forge
   - defaults
-  - gwoptics
 dependencies:
-  - jupyterlab
+  - python=3.9
   - matplotlib
   - scipy
   - numpy
+  - pip
   - pyqt
   - pyqtgraph
+  - pip:
+      - pyaudio
 prefix: /Users/rana/miniforge3/envs/jukebox
