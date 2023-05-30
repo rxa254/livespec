@@ -23,7 +23,7 @@ from pyqtgraph import AxisItem
 import pyaudio
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-
+from PyQt5.QtGui import QTransform
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -132,25 +132,35 @@ class SpectrogramWidget(pg.PlotWidget):
             # setup the scaling for linear freq y-axis
             freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
             # setup the scaling for log freq y-axis
-            freq = np.logspace(np.log10(20),
-                               np.log10(FS/2),
-                               int(CHUNKSZ/2)+1)
+            #freq = np.logspace(np.log10(20),
+            #                   np.log10(FS/2),
+            #                   int(CHUNKSZ/2)+1)
 
             yscale = 1.0/(self.img_array.shape[1]/freq[-1])
+            tr = QTransform()
+            tr.scale((1./FS)*CHUNKSZ, yscale)
+            self.img.setTransform(tr)
 
-            #self.img.scale((1./FS)*CHUNKSZ, yscale)
+            #self.img.scale((1/FS)*CHUNKSZ, yscale)
             #self.img.setScale((1./FS)*CHUNKSZ, yscale)
             self.setLabel('left', 'Frequency', units='Hz')
 
         elif args.freq_scale == 'log':
             # setup the correct scaling for log y-axis
-            freq = np.logspace(np.log10(1), np.log10(FS/2), CHUNKSZ//2+1, base=10)
+            freq = np.logspace(np.log10(1), np.log10(FS/2),
+                               CHUNKSZ//2+1, base=10)
             yscale = 1.0/(self.img_array.shape[1]/np.log10(freq[-1]/freq[0]))
-            #self.img.scale((1./FS)*CHUNKSZ, yscale)
-            #self.img.setScale((1./FS)*CHUNKSZ, yscale)
-            #self.img.scale(QtCore.QPointF((1./FS)*CHUNKSZ, yscale))
-            self.getAxis('left').setScale(LogAxisItem(orientation='left'))
-            self.getAxis('left').setLabel('Frequency', units='Hz')
+
+            tr = QTransform()
+            tr.scale((1./FS)*CHUNKSZ, yscale)
+            self.img.setTransform(tr)
+
+            tick_freqs = [1, 10, 20, 50, 100, 200, 500,
+                          1000, 2000, 5000, 10000, 20000]
+            ticks = [[(np.log10(f), str(f)) for f in tick_freqs]]
+            self.getAxis('left').setTicks(ticks)
+            #self.getAxis('left').setScale(LogAxisItem(orientation='left'))
+            #self.getAxis('left').setLabel('Frequency', units='Hz')
 
 
         self.setLabel('bottom', 'Time', units='s')
